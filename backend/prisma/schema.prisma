@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  BUYER
+  SELLER
+  ADMIN
+}
+enum OrderStatus {
+  PENDENTE
+  CONFIRMADO
+  ENVIADO
+  ENTREGUE
+  CANCELADO
+}
+model User {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  password String
+  phone String?
+  role Role @default(BUYER)
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  products Product[]
+  cart Cart?
+  purchases Order[] @relation("BuyerOrders")
+  sales Order[] @relation("SellerOrders")
+}
+model Category {
+  id String @id @default(cuid())
+  name String @unique
+  description String?
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  products Product[]
+}
+model Product {
+  id String @id @default(cuid())
+  name String
+  description String
+  price Int
+  stock Int @default(0)
+  imageUrl String?
+  active Boolean @default(true)
+  sellerId String
+  categoryId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  seller User @relation(fields: [sellerId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+  cartItems CartItem[]
+  orderItems OrderItem[]
+  @@index([categoryId, active])
+  @@index([sellerId])
+}
+model Cart {
+  id String @id @default(cuid())
+  buyerId String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  buyer User @relation(fields: [buyerId], references: [id])
+  items CartItem[]
+}
+model CartItem {
+  id String @id @default(cuid())
+  cartId String
+  productId String
+  quantity Int
+  unitPrice Int
+  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+  @@unique([cartId, productId])
+}
+model Order {
+  id String @id @default(cuid())
+  buyerId String
+  sellerId String
+  total Int
+  status OrderStatus @default(PENDENTE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  buyer User @relation("BuyerOrders", fields: [buyerId], references: [id])
+  seller User @relation("SellerOrders", fields: [sellerId], references: [id])
+  items OrderItem[]
+  @@index([buyerId, createdAt])
+  @@index([sellerId, status])
+}
+model OrderItem {
+  id String @id @default(cuid())
+  orderId String
+  productId String
+  productName String
+  quantity Int
+  unitPrice Int
+  subtotal Int
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+}
